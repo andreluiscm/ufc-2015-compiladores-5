@@ -7,8 +7,7 @@ PARSER_BEGIN(MiniJavaParser)
   public class MiniJavaParser {}
 PARSER_END(MiniJavaParser)
 
-
-// Insert a specification of a lexical analysis here.
+// Especificação de análise léxica.
 TOKEN:
 {
   < LPAREN: "(" >
