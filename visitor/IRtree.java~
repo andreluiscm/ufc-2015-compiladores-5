@@ -1,4 +1,4 @@
-package visitor;
+﻿package visitor;
 
 import java.util.*;
 import syntaxtree.*;
@@ -174,29 +174,61 @@ public class IRTree implements IRVisitor
 
 	// StatementList sl;
 	public Exp visit(Block n) {
-		for ( int i = 0; i < n.sl.size(); i++ ) {
-			n.sl.elementAt(i).accept(this);
-		}
-		return null;
+                tree.Exp stm = null;
+                tree.Exp stm1 = null;
+                tree.Exp stm2 = null;
+                tree.SEQ seq = null;            
+                
+                for ( int i = 0; i < n.sl.size(); i++ ) {
+			
+                        if( i%2 == 0 ){
+                                stm2 = n.sl.elementAt(i).accept(this);
+                                seq = new tree.SEQ(stm1,stm2);
+                                stm = seq;
+				
+                        }else{
+                                stm1 = n.sl.elementAt(i).accept(this);
+                                stm = stm1;
+                        }
+                }
+
+                return (tree.Exp)stm;
 	}
 
 	// Exp e;
 	// Statement s1,s2;
 	public Exp visit(If n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e.accept(this);
-		n.s1.accept(this);
-		n.s2.accept(this);
-		return null;
+		tree.Exp exp = n.e.accept(this);          
+                tree.Exp if1 = n.s1.accept(this);
+                tree.Exp if2 = n.s2.accept(this);
+                Label fal = new Label();
+                Label tru = new Label();
+                Label end = new Label();
+                
+                return new SEQ(new CJUMP(CJUMP.EQ, new CONST(1), exp, tru, fal),
+                       new SEQ( new LABEL(tru), 
+                                new SEQ ( if1,
+                                        new SEQ ( new JUMP(end),
+                                                new SEQ ( new LABEL(fal),
+                                                        new SEQ (if2, 
+                                                                new LABEL(end)
+                                                                )))))); 	
 	}
 
 	// Exp e;
 	// Statement s;
 	public Exp visit(While n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e.accept(this);
-		n.s.accept(this);
-		return null;
+                n.e.accept(this);               
+                tree.Exp exp = n.e.accept(this);
+                tree.Exp b = n.s.accept(this);
+                Label loop = new Label();
+                Label fim = new Label();
+                Label inicio = new Label();          
+                return new SEQ(new LABEL(inicio), 
+                                 new SEQ(new CJUMP(CJUMP.EQ, new CONST(1), exp, loop, fim), 
+                                                new SEQ(new LABEL(loop),
+                                                                new SEQ(b,new SEQ(new JUMP(inicio), 
+                                                                                                new LABEL(fim))))));
 	}
 
 	// Exp e;
@@ -228,69 +260,79 @@ public class IRTree implements IRVisitor
 
 	// Exp e1,e2;
 	public Exp visit(And n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e1.accept(this);
-		n.e2.accept(this);
-		return null;
+		tree.Exp and1 = n.e1.accept(this);
+                tree.Exp and2 = n.e2.accept(this);               
+
+                return new BINOP(BINOP.AND,and1,and2);
 	}
 
 	// Exp e1,e2;
 	public Exp visit(LessThan n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e1.accept(this);
-		n.e2.accept(this);
-		return null;
+                tree.Exp lt1 = n.e1.accept(this);
+                tree.Exp lt2 = n.e2.accept(this);
+                TEMP r = new TEMP(new temp.Temp());
+                Label tru = new temp.Label();
+                Label fal = new temp.Label();
+                Label fim = new temp.Label();             
+                return new ESEQ(                                
+                                new SEQ(new tree.CJUMP(CJUMP.LT,lt1, lt2, tru, fal),                        
+                                                new SEQ(new SEQ(new LABEL(tru),new SEQ(new MOVE(r, new CONST(1)),
+                                                new JUMP(fim))),new SEQ(new LABEL(fal),
+                                                                new SEQ(new MOVE(r, new CONST(0)),
+                                                                new SEQ(new tree.JUMP(fim),new LABEL(fim)))))), r);  
 	}
 
 	// Exp e1,e2;
 	public Exp visit(Plus n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e1.accept(this);
-		n.e2.accept(this);
-		return null;
+                tree.Exp plus1 = n.e1.accept(this);
+                tree.Exp plus2 = n.e2.accept(this);
+
+                return new BINOP(BINOP.PLUS, plus1, plus2);
 	}
 
 	// Exp e1,e2;
 	public Exp visit(Minus n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e1.accept(this);
-		n.e2.accept(this);
-		return null;
+                tree.Exp minus1 = n.e1.accept(this);
+                tree.Exp minus2 = n.e1.accept(this);
+
+                return new BINOP(BINOP.MINUS, minus1, minus2);
 	}
 
 	// Exp e1,e2;
 	public Exp visit(Times n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e1.accept(this);
-		n.e2.accept(this);
-		return null;
+                tree.Exp times1 = n.e1.accept(this);
+                tree.Exp times2 = n.e1.accept(this);
+
+                return new BINOP(BINOP.MUL, times1, times2);
 	}
 
 	// Exp e1,e2;
 	public Exp visit(ArrayLookup n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e1.accept(this);
-		n.e2.accept(this);
-		return null;
+		tree.Exp mem1 = n.e1.accept(this)
+		tree.Exp mem2 = n.e2.accept(this)
+                return new MEM( new BINOP(BINOP.PLUS,
+                                        new MEM(mem1),
+                                        mem2));
 	}
 
 	// Exp e;
 	public Exp visit(ArrayLength n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e.accept(this);
-		return null;
+		//FAZER
 	}
 
 	// Exp e;
 	// Identifier i;
 	// ExpList el;
 	public Exp visit(Call n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
+		ExpList expList = null;
+		Exp node;
+
 		n.e.accept(this);
 		for ( int i = 0; i < n.el.size(); i++ ) {
-			Type tparam = n.el.elementAt(i).accept(this);
+			node.el.elementAt(i).accept(this);
+			expList = new ExpList(node, expList);
 		}
-		return null;
+		return CALL(new NAME(new Label(n.i.toString())), expList);
 	}
 
 	// int i;
@@ -303,45 +345,41 @@ public class IRTree implements IRVisitor
 	}
 
 	public Exp visit(False n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		return null;
+		return new Ex(new CONST(0));
 	}
 
 	// String s;
 	public Exp visit(IdentifierExp n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		return null;
+		String actualID = n.s;
+		return new TEMP(getVar(actualID));
 	}
 
 	public Exp visit(This n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		return null;
+		String actualID = "this";
+		return TEMP(getVar(actualID));
 	}
 
 	// Exp e;
 	public Exp visit(NewArray n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e.accept(this);
-		return null;
+		return new TEMP(new Temp());
 	}
 
 	// Identifier i;
 	public Exp visit(NewObject n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		return null;
+		return new TEMP(new Temp());
 	}
 
 	// Exp e;
 	public Exp visit(Not n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.e.accept(this);
-		return null;
+		Exp element = n.e.accept(this);
+		Exp not = new BINOP(BINOP.Minus, new CONST(1), element);
+
+		return not;
 	}
 
 	// String s;
 	public Exp visit(Identifier n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		return null;
+		return new TEMP(getVar(n.s));
 	}
 	
 }
