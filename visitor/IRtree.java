@@ -174,25 +174,16 @@ public class IRTree implements IRVisitor
 
 	// StatementList sl;
 	public Exp visit(Block n) {
-                Exp stm = null;
-                Exp stm1 = null;
-                Exp stm2 = null;
-                SEQ seq = null;            
-                
-                for ( int i = 0; i < n.sl.size(); i++ ) {
-			
-                        if( i%2 == 0 ){
-                                stm2 = n.sl.elementAt(i).accept(this);
-                                seq = new SEQ(stm1,stm2);
-                                stm = seq;
-				
-                        }else{
-                                stm1 = n.sl.elementAt(i).accept(this);
-                                stm = stm1;
-                        }
+		Stm actual,next;
+		SEQ seq;
+		actual = n.sl.elementAt(0).accept(this);
+                for ( int i = 1; i < n.sl.size(); i++ ) 
+                {
+                	next = n.sl.elementAt(i).accept(this);
+                	seq = new SEQ(seq,next);
                 }
 
-                return (Exp)stm;
+                return (Exp)seq;
 	}
 
 	// Exp e;
@@ -242,20 +233,13 @@ public class IRTree implements IRVisitor
 	// Identifier i;
 	// Exp e;
 	public Exp visit(Assign n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.i.accept();
-		n.e.accept(this);
-		return null;
+		return new MOVE(new TEMP(n.i.toString()),n.e.accept(this));
 	}
 
 	// Identifier i;
 	// Exp e1,e2;
 	public Exp visit(ArrayAssign n) {
-		//!!!!!!!!!!!!!!!!!!!!!!COLOCAR CÓDIDO AQUI!!!!!!!!!!!!!!!!!!!!!!!!!
-		n.i.accept();
-		n.e1.accept(this);
-		n.e2.accept(this);
-		return null;
+		return new MOVE( new BINOP(BINOP.PLUS, new MEM(new TEMP(n.i.toString())), n.e1.accept(this)),n.e2.accept(this) );
 	}
 
 	// Exp e1,e2;
@@ -310,9 +294,7 @@ public class IRTree implements IRVisitor
 	public Exp visit(ArrayLookup n) {
 		Exp mem1 = n.e1.accept(this)
 		Exp mem2 = n.e2.accept(this)
-                return new MEM( new BINOP(BINOP.PLUS,
-                                        new MEM(mem1),
-                                        mem2));
+                return new MEM( new BINOP(BINOP.PLUS, new MEM(mem1), mem2));
 	}
 
 	// Exp e;
@@ -326,8 +308,6 @@ public class IRTree implements IRVisitor
 	public Exp visit(Call n) {
 		ExpList expList = null;
 		Exp node;
-
-		n.e.accept(this);
 		for ( int i = 0; i < n.el.size(); i++ ) {
 			node.el.elementAt(i).accept(this);
 			expList = new ExpList(node, expList);
@@ -350,13 +330,11 @@ public class IRTree implements IRVisitor
 
 	// String s;
 	public Exp visit(IdentifierExp n) {
-		String actualID = n.s;
-		return new TEMP((actualID));
+		return new TEMP(n.s);
 	}
 
 	public Exp visit(This n) {
-		String actualID = "this";
-		return TEMP((actualID));
+		return TEMP("this");
 	}
 
 	// Exp e;
@@ -373,13 +351,12 @@ public class IRTree implements IRVisitor
 	public Exp visit(Not n) {
 		Exp element = n.e.accept(this);
 		Exp not = new BINOP(BINOP.Minus, new CONST(1), element);
-
 		return not;
 	}
 
 	// String s;
 	public Exp visit(Identifier n) {
-		return new TEMP((n.s));
+		return new TEMP(n.s);
 	}
 	
 }
