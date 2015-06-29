@@ -10,28 +10,29 @@ public class Main {
    
    public static void main(String [] args) throws IOException {
       try {
-    	  String input = new ReadFile().getContent("t.txt");
+    	  String input = new ReadFile().getContent(args[0]);
     	  Program p = new MiniJavaParser(new java.io.StringReader(input)).Prog();
-    	  System.out.println("Sintatic analysis successfull");
+    	  System.out.println(">Sintatic analysis successfull");
     	  p.accept(new PrettyPrintVisitor());
-    	  System.out.println("Semantic analysis successfull");
+    	  System.out.println(">Semantic analysis successfull");
     	  SymbolTable s = new SymbolTable();
     	  p.accept(s);
     	  if (s.hasError())
     	  	System.out.println("Error creating Symbol Table. Abort.");
     	  else
     	  {
-	    	  System.out.println("Symbol Table created successfull");
+	    	  System.out.println(">Symbol Table created successfull");
 	    	  s.PrettyPrint();
 	    	  TypeChecking tc = new TypeChecking(s.getProgramTable());
 	    	  p.accept(tc);
 	    	  if (tc.hasError())
 	    	  	System.out.println("Error checking types. Abort.");
 	    	  else
-	    	  	System.out.println("Types checked sucessfully");
+	    	  	System.out.println(">Types checked sucessfully");
 	  }
+	  /* NO TEST!
 	  IRTree t;
-	  p.accept(t);
+	  p.accept(t);*/
       }
       catch (ParseException e) {
          System.out.println("Error : \n"+ e.toString());

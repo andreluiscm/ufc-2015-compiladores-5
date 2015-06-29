@@ -1,0 +1,362 @@
+﻿package visitor;
+
+import java.util.*;
+import syntaxtree.*;
+import symbol.*;
+
+public class IRTree implements IRVisitor
+{
+	private Frame currentFrame;
+	private Frag initial;
+	private Frag frags;
+	private ClassTable currentClass;
+	private MethodTable currentMethod;
+	private ProgramTable pt;
+	
+	public IRTree (ProgramTable pt, Frame f)
+	{
+		this.pt = pt;
+		frags = new Frag(null);
+		initial = frags;
+		currentFrame = f;
+	}
+	
+	public procEntryExit (Exp body)
+	{
+		ProcFrag f = new ProcFrag(body, frame);
+		frags.addNext(f);
+		frags = frags.getNext();
+	}
+	
+	public Frag getResults()
+	{
+		return frags;
+	}
+	
+	// MainClass m;
+	// ClassDeclList cl;
+	public Exp visit(Program n) {
+		n.m.accept(this);
+		for ( int i = 0; i < n.cl.size(); i++ ) {
+			n.cl.elementAt(i).accept(this);
+		}
+		return null;
+	}
+
+	// Identifier i1,i2;
+	// Statement s;
+	public Exp visit(MainClass n) {
+		n.i1.accept(this);
+		currentClass = pt.getClass(Symbol.symbol(n.i1.toString()));
+		n.i2.accept(this);
+		Symbol sy = Symbol.symbol(n.i2.toString());
+		currentMethod = currentClass.getMethod(sy);
+		Frame mFrame = currentFrame(sy,new BoolList(false,null));
+		currentFrame = mFrame;
+		Exp se = n.s.accept(this);
+		Exp retExp = new CONST(0);
+		Exp body = new MOVE( new TEMP(currentFrame.RV()) , new ESEQ( se , retExp ) );
+		procEntryExit(body);
+		return null;
+	}
+
+	// Identifier i;
+	// VarDeclList vl;
+	// MethodDeclList ml;
+	public Exp visit(ClassDeclSimple n) {
+		n.i.accept(this);
+		currentClass = pt.getClass(Symbol.symbol(n.i.toString()));
+		currentMethod = null;
+		for ( int i = 0; i < n.vl.size(); i++ ) {
+			n.vl.elementAt(i).accept(this);
+		}
+		for ( int i = 0; i < n.ml.size(); i++ ) {
+			n.ml.elementAt(i).accept(this);
+		}
+		return null;
+	}
+
+	// Identifier i;
+	// Identifier j;
+	// VarDeclList vl;
+	// MethodDeclList ml;
+	public Exp visit(ClassDeclExtends n) {
+		n.i.accept(this);
+		currentClass = pt.getClass(Symbol.symbol(n.i.toString()));
+		n.j.accept(this);
+		currentMethod = null;
+		for ( int i = 0; i < n.vl.size(); i++ ) {
+			n.vl.elementAt(i).accept(this);
+		}
+		for ( int i = 0; i < n.ml.size(); i++ ) {
+			n.ml.elementAt(i).accept(this);
+		}
+		return null;
+	}
+
+	// Type t;
+	// Identifier i;
+	//NOTHING TO DO HERE!!!
+	public Exp visit(VarDecl n) {
+		return null;
+	}
+
+	// Type t;
+	// Identifier i;
+	// FormalList fl;
+	// VarDeclList vl;
+	// StatementList sl;
+	// Exp e;
+	public Exp visit(MethodDecl n) {
+		n.t.accept(this);
+		currentMethod = currentClass.getMethod(Symbol.symbol(n.i.toString()));
+		BoolList b = new BoolList(false, null);
+		BoolList init = b;
+		for ( int i = 0; i < n.fl.size(); i++ ) {
+			n.fl.elementAt(i).accept(this);
+			b.tail = new BoolList(false,null);
+			b = b.tail;
+		}
+		b = init;
+		Frame newf = currentFrame(Symbol.symbol(n.i.toString()),b);
+		Frame oldf = currentFrame;
+		currentFrame = newf;
+		for ( int i = 0; i < n.vl.size(); i++ ) {
+			n.vl.elementAt(i).accept(this);
+		}
+		Exp retExp = null;
+		Exp body = null;
+		if (!n.sl.size())
+		{
+			retExp = n.e.accept(this);
+			body = new MOVE( new TEMP(currentFrame.RV()) , new ESEQ( null , retExp ) );
+		}
+		else
+		{
+			body = n.sl.elementAt(0).accept(this);
+			for ( int i = 1; i < n.sl.size(); i++ ) {
+				body = new SEQ(body, n.sl.elementAt(i).accept(this));
+			}
+			retExp = n.e.accept(this);
+			body = new MOVE( new TEMP(currentFrame.RV()) , new ESEQ( body , retExp ) );
+		}
+		procEntryExit(body);
+		return null;
+	}
+
+	// Type t;
+	// Identifier i;
+	//NOTHING TO DO HERE!!!
+	public Exp visit(Formal n) {
+		return null;
+	}
+
+	//NOTHING TO DO HERE!!!
+	public Exp visit(IntArrayType n) {
+		return null;
+	}
+
+	//NOTHING TO DO HERE!!!
+	public Exp visit(BooleanType n) {
+		return null;
+	}
+
+	//NOTHING TO DO HERE!!!
+	public Exp visit(IntegerType n) {
+		return null;
+	}
+	
+	//NOTHING TO DO HERE!!!
+	// String s;
+	public Exp visit(IdentifierType n) {
+		return null;
+	}
+
+	// StatementList sl;
+	public Exp visit(Block n) {
+		Stm actual,next;
+		SEQ seq;
+		actual = n.sl.elementAt(0).accept(this);
+                for ( int i = 1; i < n.sl.size(); i++ ) 
+                {
+                	next = n.sl.elementAt(i).accept(this);
+                	seq = new SEQ(seq,next);
+                }
+
+                return (Exp)seq;
+	}
+
+	// Exp e;
+	// Statement s1,s2;
+	public Exp visit(If n) {
+		Exp exp = n.e.accept(this);          
+                Exp if1 = n.s1.accept(this);
+                Exp if2 = n.s2.accept(this);
+                Label fal = new Label();
+                Label tru = new Label();
+                Label end = new Label();
+                
+                return new SEQ(new CJUMP(CJUMP.EQ, new CONST(1), exp, tru, fal),
+                       new SEQ( new LABEL(tru), 
+                                new SEQ ( if1,
+                                        new SEQ ( new JUMP(end),
+                                                new SEQ ( new LABEL(fal),
+                                                        new SEQ (if2, 
+                                                                new LABEL(end)
+                                                                )))))); 	
+	}
+
+	// Exp e;
+	// Statement s;
+	public Exp visit(While n) {
+                n.e.accept(this);               
+                Exp exp = n.e.accept(this);
+                Exp b = n.s.accept(this);
+                Label loop = new Label();
+                Label fim = new Label();
+                Label inicio = new Label();          
+                return new SEQ(new LABEL(inicio), 
+                                 new SEQ(new CJUMP(CJUMP.EQ, new CONST(1), exp, loop, fim), 
+                                                new SEQ(new LABEL(loop),
+                                                                new SEQ(b,new SEQ(new JUMP(inicio), 
+                                                                                                new LABEL(fim))))));
+	}
+
+	// Exp e;
+	public Type visit(Print n) {
+		Exp exp = n.e.accept(this);
+		List<Exp> printarg = new LinkedList<Exp>();
+		printarg.add(exp.unEx());
+		return new Exp( frame.externalCall("printint",args) );
+	}
+
+	// Identifier i;
+	// Exp e;
+	public Exp visit(Assign n) {
+		return new MOVE(new TEMP(n.i.toString()),n.e.accept(this));
+	}
+
+	// Identifier i;
+	// Exp e1,e2;
+	public Exp visit(ArrayAssign n) {
+		return new MOVE( new BINOP(BINOP.PLUS, new MEM(new TEMP(n.i.toString())), n.e1.accept(this)),n.e2.accept(this) );
+	}
+
+	// Exp e1,e2;
+	public Exp visit(And n) {
+		Exp and1 = n.e1.accept(this);
+                Exp and2 = n.e2.accept(this);               
+
+                return new BINOP(BINOP.AND,and1,and2);
+	}
+
+	// Exp e1,e2;
+	public Exp visit(LessThan n) {
+                Exp lt1 = n.e1.accept(this);
+                Exp lt2 = n.e2.accept(this);
+                TEMP r = new TEMP(new temp.Temp());
+                Label tru = new temp.Label();
+                Label fal = new temp.Label();
+                Label fim = new temp.Label();             
+                return new ESEQ(                                
+                                new SEQ(new tree.CJUMP(CJUMP.LT,lt1, lt2, tru, fal),                        
+                                                new SEQ(new SEQ(new LABEL(tru),new SEQ(new MOVE(r, new CONST(1)),
+                                                new JUMP(fim))),new SEQ(new LABEL(fal),
+                                                                new SEQ(new MOVE(r, new CONST(0)),
+                                                                new SEQ(new tree.JUMP(fim),new LABEL(fim)))))), r);  
+	}
+
+	// Exp e1,e2;
+	public Exp visit(Plus n) {
+                Exp plus1 = n.e1.accept(this);
+                Exp plus2 = n.e2.accept(this);
+
+                return new BINOP(BINOP.PLUS, plus1, plus2);
+	}
+
+	// Exp e1,e2;
+	public Exp visit(Minus n) {
+                Exp minus1 = n.e1.accept(this);
+                Exp minus2 = n.e1.accept(this);
+
+                return new BINOP(BINOP.MINUS, minus1, minus2);
+	}
+
+	// Exp e1,e2;
+	public Exp visit(Times n) {
+                Exp times1 = n.e1.accept(this);
+                Exp times2 = n.e1.accept(this);
+
+                return new BINOP(BINOP.MUL, times1, times2);
+	}
+
+	// Exp e1,e2;
+	public Exp visit(ArrayLookup n) {
+		Exp mem1 = n.e1.accept(this)
+		Exp mem2 = n.e2.accept(this)
+                return new MEM( new BINOP(BINOP.PLUS, new MEM(mem1), mem2));
+	}
+
+	// Exp e;
+	public Exp visit(ArrayLength n) {
+		//FAZER
+	}
+
+	// Exp e;
+	// Identifier i;
+	// ExpList el;
+	public Exp visit(Call n) {
+		ExpList expList = null;
+		Exp node;
+		for ( int i = 0; i < n.el.size(); i++ ) {
+			node.el.elementAt(i).accept(this);
+			expList = new ExpList(node, expList);
+		}
+		return CALL(new NAME(new Label(n.i.toString())), expList);
+	}
+
+	// int i;
+	public Exp visit(IntegerLiteral n) {
+		return new Ex(new CONST(n.i));
+	}
+
+	public Exp visit(True n) {
+		return new Ex(new CONST(1));
+	}
+
+	public Exp visit(False n) {
+		return new Ex(new CONST(0));
+	}
+
+	// String s;
+	public Exp visit(IdentifierExp n) {
+		return new TEMP(n.s);
+	}
+
+	public Exp visit(This n) {
+		return TEMP("this");
+	}
+
+	// Exp e;
+	public Exp visit(NewArray n) {
+		return new TEMP(new Temp());
+	}
+
+	// Identifier i;
+	public Exp visit(NewObject n) {
+		return new TEMP(new Temp());
+	}
+
+	// Exp e;
+	public Exp visit(Not n) {
+		Exp element = n.e.accept(this);
+		Exp not = new BINOP(BINOP.Minus, new CONST(1), element);
+		return not;
+	}
+
+	// String s;
+	public Exp visit(Identifier n) {
+		return new TEMP(n.s);
+	}
+	
+}
