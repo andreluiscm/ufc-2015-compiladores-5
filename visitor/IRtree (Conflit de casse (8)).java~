@@ -3,8 +3,10 @@ package visitor;
 import java.util.*;
 import syntaxtree.*;
 import symbol.*;
+import Translate.*;
+import Tree.*;
 
-public class IRTree implements IRVisitor
+public class IRTree implements IRvisitor
 {
 	private Frame currentFrame;
 	private Frag initial;
@@ -55,7 +57,7 @@ public class IRTree implements IRVisitor
 		currentFrame = mFrame;
 		Exp se = n.s.accept(this);
 		Exp retExp = new CONST(0);
-		Exp body = new MOVE( new TEMP(currentFrame.RV()) , new ESEQ( se , retExp ) );
+		Exp body = new MOVE( new Tree.TEMP(currentFrame.RV()) , new ESEQ( se , retExp ) );
 		procEntryExit(body);
 		return null;
 	}
@@ -129,7 +131,7 @@ public class IRTree implements IRVisitor
 		if (!n.sl.size())
 		{
 			retExp = n.e.accept(this);
-			body = new MOVE( new TEMP(currentFrame.RV()) , new ESEQ( null , retExp ) );
+			body = new MOVE( new Tree.TEMP(currentFrame.RV()) , new ESEQ( null , retExp ) );
 		}
 		else
 		{
@@ -138,7 +140,7 @@ public class IRTree implements IRVisitor
 				body = new SEQ(body, n.sl.elementAt(i).accept(this));
 			}
 			retExp = n.e.accept(this);
-			body = new MOVE( new TEMP(currentFrame.RV()) , new ESEQ( body , retExp ) );
+			body = new MOVE( new Tree.TEMP(currentFrame.RV()) , new ESEQ( body , retExp ) );
 		}
 		procEntryExit(body);
 		return null;
@@ -197,12 +199,12 @@ public class IRTree implements IRVisitor
                 Label end = new Label();
                 
                 return new SEQ(new CJUMP(CJUMP.EQ, new CONST(1), exp, tru, fal),
-                       new SEQ( new LABEL(tru), 
+                       new SEQ( new Tree.LABEL(tru), 
                                 new SEQ ( if1,
                                         new SEQ ( new JUMP(end),
-                                                new SEQ ( new LABEL(fal),
+                                                new SEQ ( new Tree.LABEL(fal),
                                                         new SEQ (if2, 
-                                                                new LABEL(end)
+                                                                new Tree.LABEL(end)
                                                                 )))))); 	
 	}
 
@@ -215,11 +217,11 @@ public class IRTree implements IRVisitor
                 Label loop = new Label();
                 Label fim = new Label();
                 Label inicio = new Label();          
-                return new SEQ(new LABEL(inicio), 
+                return new SEQ(new Tree.LABEL(inicio), 
                                  new SEQ(new CJUMP(CJUMP.EQ, new CONST(1), exp, loop, fim), 
-                                                new SEQ(new LABEL(loop),
+                                                new SEQ(new Tree.LABEL(loop),
                                                                 new SEQ(b,new SEQ(new JUMP(inicio), 
-                                                                                                new LABEL(fim))))));
+                                                                                                new Tree.LABEL(fim))))));
 	}
 
 	// Exp e;
@@ -233,13 +235,13 @@ public class IRTree implements IRVisitor
 	// Identifier i;
 	// Exp e;
 	public Exp visit(Assign n) {
-		return new MOVE(new TEMP(n.i.toString()),n.e.accept(this));
+		return new MOVE(new Tree.TEMP(n.i.toString()),n.e.accept(this));
 	}
 
 	// Identifier i;
 	// Exp e1,e2;
 	public Exp visit(ArrayAssign n) {
-		return new MOVE( new BINOP(BINOP.PLUS, new MEM(new TEMP(n.i.toString())), n.e1.accept(this)),n.e2.accept(this) );
+		return new MOVE( new BINOP(BINOP.PLUS, new MEM(new Tree.TEMP(n.i.toString())), n.e1.accept(this)),n.e2.accept(this) );
 	}
 
 	// Exp e1,e2;
@@ -254,16 +256,16 @@ public class IRTree implements IRVisitor
 	public Exp visit(LessThan n) {
                 Exp lt1 = n.e1.accept(this);
                 Exp lt2 = n.e2.accept(this);
-                TEMP r = new TEMP(new temp.Temp());
+                Tree.TEMP r = new Tree.TEMP(new temp.Temp());
                 Label tru = new temp.Label();
                 Label fal = new temp.Label();
                 Label fim = new temp.Label();             
                 return new ESEQ(                                
                                 new SEQ(new tree.CJUMP(CJUMP.LT,lt1, lt2, tru, fal),                        
-                                                new SEQ(new SEQ(new LABEL(tru),new SEQ(new MOVE(r, new CONST(1)),
-                                                new JUMP(fim))),new SEQ(new LABEL(fal),
+                                                new SEQ(new SEQ(new Tree.LABEL(tru),new SEQ(new MOVE(r, new CONST(1)),
+                                                new JUMP(fim))),new SEQ(new Tree.LABEL(fal),
                                                                 new SEQ(new MOVE(r, new CONST(0)),
-                                                                new SEQ(new tree.JUMP(fim),new LABEL(fim)))))), r);  
+                                                                new SEQ(new tree.JUMP(fim),new Tree.LABEL(fim)))))), r);  
 	}
 
 	// Exp e1,e2;
@@ -294,7 +296,7 @@ public class IRTree implements IRVisitor
 	public Exp visit(ArrayLookup n) {
 		Exp mem1 = n.e1.accept(this);
 		Exp mem2 = n.e2.accept(this);
-                return new MEM( new BINOP(BINOP.PLUS, new MEM(mem1), mem2));
+                return new MEM( new BINOP(BINOP.PLUS, new MEM(mem1), new MEM(mem2)));
 	}
 
 	// Exp e;
@@ -330,21 +332,21 @@ public class IRTree implements IRVisitor
 
 	// String s;
 	public Exp visit(IdentifierExp n) {
-		return new TEMP(n.s);
+		return new Tree.TEMP(n.s);
 	}
 
 	public Exp visit(This n) {
-		return TEMP("this");
+		return Tree.TEMP("this");
 	}
 
 	// Exp e;
 	public Exp visit(NewArray n) {
-		return new TEMP(new Temp());
+		return new Tree.TEMP(new Temp());
 	}
 
 	// Identifier i;
 	public Exp visit(NewObject n) {
-		return new TEMP(new Temp());
+		return new Tree.TEMP(new Temp());
 	}
 
 	// Exp e;
@@ -356,7 +358,7 @@ public class IRTree implements IRVisitor
 
 	// String s;
 	public Exp visit(Identifier n) {
-		return new TEMP(n.s);
+		return new Tree.TEMP(n.s);
 	}
 	
 }

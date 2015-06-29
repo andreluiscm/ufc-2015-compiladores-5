@@ -30,6 +30,8 @@ public class Main {
 	    	  else
 	    	  	System.out.println("Types checked sucessfully");
 	  }
+	  IRTree t;
+	  p.accept(t);
       }
       catch (ParseException e) {
          System.out.println("Error : \n"+ e.toString());

@@ -294,7 +294,7 @@ public class IRTree implements IRVisitor
 	public Exp visit(ArrayLookup n) {
 		Exp mem1 = n.e1.accept(this);
 		Exp mem2 = n.e2.accept(this);
-                return new MEM( new BINOP(BINOP.PLUS, new MEM(mem1), mem2));
+                return new MEM( new BINOP(BINOP.PLUS, new MEM(mem1), new MEM(mem2)));
 	}
 
 	// Exp e;
